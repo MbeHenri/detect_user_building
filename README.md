@@ -1,6 +1,6 @@
 # detect_user_building
 
-Grace aux points d'accès d'un batiment, on souhaite qu'un usagé puisse connaitre où il se trouve dans ce batiment. Ce projet vise à résoudre ce problème quelque soit le nombre de points d'accès et la dimension avec laquelle on voit le batiment.
+Grace aux points d'accès d'un batiment, on souhaite qu'un usager puisse connaitre où il se trouve dans ce batiment. Ce projet vise à résoudre ce problème quelque soit le nombre de points d'accès et la dimension avec laquelle on voit le batiment.
 
 On a :
 
