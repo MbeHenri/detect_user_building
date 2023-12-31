@@ -16,6 +16,6 @@ On pourait calculer cette position en utilisant :
 
 ![Test de la détection](images/test2.png "Premier test de détection")
 
-* un ensemble de signaux collectés à des positions précisent du batiment
+* un ensemble de signaux collectés à des positions précises du batiment
 
 ![Test de la détection](images/test3.png "Deuxième test de détection")
