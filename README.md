@@ -18,4 +18,4 @@ On pourait calculer cette position en utilisant :
 
 * un ensemble de signaux collectés à des positions précisent du batiment
 
-![Test de la détection](images/test2.png "Deuxième test de détection")
+![Test de la détection](images/test3.png "Deuxième test de détection")
