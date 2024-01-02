@@ -1,8 +1,8 @@
 from numpy import dot
 
 # fonction qui permet de trouver un pas suffisament grand et petit pour atteindre la convergence
-def search_pas(f, gradf, x, d, s0 = 1e-3, smax = 1 , smin = 0):
-    s = s0
+def search_pas(f, gradf, x, d, s0 = 1e-4, smax = 1 , smin = 0):
+    """ s = s0
     correct, cond = cond_wolfe(s, f, gradf, x, d)
     while not correct :
         if cond == 1 :
@@ -11,7 +11,7 @@ def search_pas(f, gradf, x, d, s0 = 1e-3, smax = 1 , smin = 0):
         else:
             # le pas est trop petit
             smin = s
-        s = 0.5 * (smax + smin)
+        s = 0.5 * (smax + smin) """
     return s0
 
 # fonction permettant de verifier les conditions de wolfe

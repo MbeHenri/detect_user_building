@@ -53,6 +53,23 @@ def detect_collected_sim(E, P, D, epsilon=0.25, sim=cosine_similarity):
     return None
 
 
+def detect_collected_compute_access(E, access_positions, d=distance, M0=None):
+    # calculer la position de l'usager
+    access_commun = set(E.keys()) & set(access_positions.keys())
+
+    A = []
+    W = []
+    for k in access_commun:
+        A.append(access_positions[k])
+        W.append(E[k])
+
+    if len(access_commun) != 0:
+        A = array(A)
+        W = array(W)
+        return detect_position(A, W, d=d, M0=M0)
+    return None
+
+
 def detect_with_acces(A, W, d=distance, M0=None):
     """Détection de la position de l'usager en considérant les forces de signaux détectés
 
@@ -65,5 +82,5 @@ def detect_with_acces(A, W, d=distance, M0=None):
     Returns:
         ndarray: position de l'usager
     """
-    M , _ = detect_position(A, W, d=d, M0=M0)
+    M, _ = detect_position(A, W, d=d, M0=M0)
     return M

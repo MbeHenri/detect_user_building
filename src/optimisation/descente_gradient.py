@@ -2,11 +2,14 @@ from .search_pas import search_pas
 
 
 # algorithme de descente de gradient
-def descente_gradient(f, gradf, x0, e = 1e-10, max_iters = 100):
+def descente_gradient(f, gradf, x0, e = 1e-4, max_iters = 10000, verbose = False):
     # position initiale
     x = x0
     objs = [f(x0)]
     for it in range(max_iters) :
+        if verbose :
+            print("{}\r".format(objs[it]))
+        
         # la direction de descente
         d = - gradf(x)
         # le pas de descente 
@@ -16,11 +19,9 @@ def descente_gradient(f, gradf, x0, e = 1e-10, max_iters = 100):
         
         # analyse de convergence
         obj = f(x)
-        if abs(obj - objs[it-1]) < e*objs[it-1]:
-            objs.append(obj)
+        objs.append(obj)
+        if abs(obj - objs[it]) < e*objs[it]:
             break
-        else:
-            objs.append(obj)
         
     return x, objs
     
