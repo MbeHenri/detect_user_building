@@ -2,6 +2,8 @@
 
 Grace aux points d'accès d'un batiment, on souhaite qu'un usager puisse connaitre où il se trouve dans ce batiment. Ce projet vise à résoudre ce problème quelque soit la dimension avec laquelle on voit le batiment.
 
+Pour cela il faut avoir un plan du batiment et une echelle où calculer la position (l'échelle initiale peut etre trop grande ou petite)
+
 On a :
 
 * `datas`: dossier des fichiers exemple de type `csv` utilisés et générés
@@ -15,16 +17,19 @@ On pourait calculer cette position en utilisant :
 * les positions des points d'accès avec leurs signaux détectés :
 
 ![Test de la détection](images/test2.png "Premier test de détection")
+![Test de la détection](images/position_a.png)
 
 * un ensemble de signaux collectés à des positions précises du batiment
 
 On pourrait fonctionner par similarité etre les signaux détectés de l'usager et ceux collectés à des positions précises du batiment
 
 ![Test de la détection](images/test3.png "Deuxième test de détection (similarité)")
+![Test de la détection](images/position_c.png)
 
 On pourrait calculer les positions approximatives des points d'accès, puis de les utiliser pour calculer la position de l'usager.
 
 ![Test de la détection](images/test4.png "Troisième test de détection (calcul des positions des points d'accès)")
+![Test de la détection](images/position_ca.png)
 
 Lors de la première exécution de la commande `python main.py -ca`, le fichier `datas/without_acces/access_points_compute.csv` contenant les positions calculés des points d'accès (contenues dans le fichier `datas/without_acces/BSSIDs_collected.csv`) est généré.
 

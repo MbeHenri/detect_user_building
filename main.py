@@ -1,9 +1,14 @@
 import sys
+from src.plot import plot_position, openImage
 
 
 def main(args):
     if len(args) == 1:
         option = args[0]
+
+        ECHELLE = 100
+        image_batiment = openImage("./images/batiment.png")
+
         if option == "-a":
             from src.detect_user import detect_with_acces
             from src.load import load_acces_points_2d
@@ -13,6 +18,15 @@ def main(args):
 
             print("[position détectée]  ")
             print(f" M (x : {M[0]}, y : {M[1]})")
+
+            plot_position(
+                M,
+                None,
+                "./images/pointeur_violet.png",
+                image=image_batiment,
+                path_computed="./position_compute.png",
+                echelle=ECHELLE,
+            )
 
         elif option == "-c":
             from src.detect_user import detect_collected_sim
@@ -27,6 +41,15 @@ def main(args):
             if M is not None:
                 print("[Position détectée]  ")
                 print(f" M (x : {M[0]}, y : {M[1]})")
+
+                plot_position(
+                    M,
+                    None,
+                    "./images/pointeur_violet.png",
+                    image=image_batiment,
+                    path_computed="./position_compute.png",
+                    echelle=ECHELLE,
+                )
             else:
                 print("[Aucune position détectée]  ")
 
@@ -39,6 +62,7 @@ def main(args):
             from src.detect_access_points import detect_collected_access
             from src.detect_user import detect_collected_compute_access
             from src.save import save_acces_points_2d
+            from src.plot import plot_access
 
             E = load_collected_user("./datas/without_acces/BSSID_user.csv")
 
@@ -60,6 +84,25 @@ def main(args):
             if M is not None:
                 print("[Position détectée]  ")
                 print(f" M (x : {M[0]}, y : {M[1]})")
+
+                image_batiment = plot_access(
+                    access_points,
+                    None,
+                    "./images/signal.png",
+                    image=image_batiment,
+                    echelle=ECHELLE,
+                    path_computed="./access_points_compute.png",
+                    showed=False,
+                )
+
+                plot_position(
+                    M,
+                    None,
+                    "./images/pointeur_violet.png",
+                    image=image_batiment,
+                    path_computed="./position_compute.png",
+                    echelle=ECHELLE,
+                )
             else:
                 print("[Aucune position détectée]  ")
 
