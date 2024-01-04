@@ -18,7 +18,7 @@ def distance(weight: float, a=-50, n=4):
     return pow(10, (a - weight) / (10 * n))
 
 
-def detect_position(A, W, d=distance, M0=None):
+def detect_position(A, W, d=distance, M0=[10, 9]):
     """Détection de la position de l'usager ou d'un point d'accès en considérant les forces de signaux détectés
 
     Args:
@@ -50,7 +50,7 @@ def detect_position(A, W, d=distance, M0=None):
     if M0 is not None:
         x0 = array(M0)
     else:
-        x0 = rand(A.shape[1])
+        x0 = rand(A.shape[1]) * 11
 
     M, objs = descente_gradient(f, gradf, x0)
 

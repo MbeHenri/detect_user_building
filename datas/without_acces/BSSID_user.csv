@@ -1,5 +1,13 @@
 SSID;BSSID;Signal(%)
-eduroam;f4:ea:b5:b0:d4:25;90
+eduroam;f4:ea:b5:dc:15:16;80
+eduroam;f4:ea:b5:dc:2a:56;25
+eduroam;f4:ea:b5:dc:12:16;75
+THGA;f4:ea:b5:dc:6d:a4;15
+THGA;f4:ea:b5:dc:15:24;70
+THGA;f4:ea:b5:b0:d4:15;100
+voip;f4:ea:b5:dc:6d:94;90
+voip;f4:ea:b5:dc:12:14;80
+voip;f4:ea:b5:dc:10:d4;35
 eduroam;f4:ea:b5:dc:15:25;65
-eduroam;f4:ea:b5:dc:6d:96;90
-THGA;f4:ea:b5:dc:2f:15;70
+eduroam;f4:ea:b5:b0:d4:16;95
+eduroam;f4:ea:b5:dc:15:16;95
