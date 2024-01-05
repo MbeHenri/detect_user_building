@@ -106,15 +106,43 @@ def main(args):
             else:
                 print("[Aucune position détectée]  ")
 
+        elif option == "-ia":
+            from src.load import load_to_compute_acces_points_2d, load_collected_user
+
+            usager = load_collected_user("./datas/without_acces/BSSID_user.csv")
+
+            # chargement et utilisation du modèle sauvegardé
+            from pickle import load
+
+            with open("detect_model.pkl", "rb") as f:
+                detect_model = load(f)
+
+            M = detect_model.predict(usager)[0]
+
+            print("[Position détectée]  ")
+            print(f" M (x : {M[0]}, y : {M[1]})")
+
+            plot_position(
+                M,
+                None,
+                "./images/pointeur_violet.png",
+                image=image_batiment,
+                path_computed="./position_compute.png",
+                echelle=ECHELLE,
+            )
+
     else:
         print("[USAGE]")
-        print("python main.py <-a|-c|-ca>\n")
+        print("python main.py <-a|-c|-ca|-ia>\n")
         print("-a : option si on a les positions des points d'accès")
         print(
             "-c : option si on a un ensemble de signaux collectés avec leurs positions (méthode par similarité)"
         )
         print(
             "-ca : option si on a un ensemble de signaux collectés avec leurs positions (méthode par calcul des points d'accès ) \n"
+        )
+        print(
+            "-ca : option si on a un ensemble de signaux collectés avec leurs positions (méthode par apprentissage arificielle ) \n"
         )
         print("[EXEMPLE]")
         print("python main.py -c\n")
