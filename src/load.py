@@ -37,7 +37,7 @@ def load_collected_positions_2d(path_csv):
             signaux[["BSSID", "Signal(%)"]].set_index("BSSID").to_dict()["Signal(%)"]
         )
         D.append(signaux_)
-    P = array(P)
+    P = array(P, dtype=float)
     return P, D
 
 

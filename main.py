@@ -36,7 +36,7 @@ def main(args):
             P, D = load_collected_positions_2d(
                 "./datas/without_acces/BSSIDs_collected.csv"
             )
-            M = detect_collected_sim(E, P, D, epsilon=0.25)
+            M = detect_collected_sim(E, P, D, k=1)
 
             if M is not None:
                 print("[Position détectée]  ")

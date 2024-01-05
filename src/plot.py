@@ -11,8 +11,8 @@ def addIconInImage(image, icon, position, dim_icon=35):
     icon = icon.convert("RGBA").resize((dim_icon, dim_icon))
 
     # Définir les coordonnées de l'endroit où vous souhaitez insérer l'image
-    position_x = position[0] - dim_icon / 2
-    position_y = position[1] - dim_icon
+    position_x = position[0]
+    position_y = position[1]
     position_x = int(position_x)
     position_y = int(position_y)
 
