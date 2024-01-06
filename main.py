@@ -22,7 +22,7 @@ def main(args):
             plot_position(
                 M,
                 None,
-                "./images/pointeur_violet.png",
+                "./images/pointeur.png",
                 image=image_batiment,
                 path_computed="./position_compute.png",
                 echelle=ECHELLE,
@@ -45,7 +45,7 @@ def main(args):
                 plot_position(
                     M,
                     None,
-                    "./images/pointeur_violet.png",
+                    "./images/pointeur.png",
                     image=image_batiment,
                     path_computed="./position_compute.png",
                     echelle=ECHELLE,
@@ -98,7 +98,7 @@ def main(args):
                 plot_position(
                     M,
                     None,
-                    "./images/pointeur_violet.png",
+                    "./images/pointeur.png",
                     image=image_batiment,
                     path_computed="./position_compute.png",
                     echelle=ECHELLE,
@@ -125,7 +125,7 @@ def main(args):
             plot_position(
                 M,
                 None,
-                "./images/pointeur_violet.png",
+                "./images/pointeur.png",
                 image=image_batiment,
                 path_computed="./position_compute.png",
                 echelle=ECHELLE,

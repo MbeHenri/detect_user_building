@@ -1,9 +1,11 @@
 from PIL import Image
 
+
 def openImage(path):
     return Image.open(path)
 
-def addIconInImage(image, icon, position, dim_icon=35):
+
+def addIconInImage(image, icon, position, dim_icon=50):
     # Charger l'image principale
     image = image.convert("RGBA")
 
@@ -11,8 +13,9 @@ def addIconInImage(image, icon, position, dim_icon=35):
     icon = icon.convert("RGBA").resize((dim_icon, dim_icon))
 
     # Définir les coordonnées de l'endroit où vous souhaitez insérer l'image
-    position_x = position[0]
-    position_y = position[1]
+    dm = dim_icon / 2
+    position_x = position[0] - dm
+    position_y = position[1] - dm
     position_x = int(position_x)
     position_y = int(position_y)
 
@@ -22,6 +25,7 @@ def addIconInImage(image, icon, position, dim_icon=35):
     # Afficher ou enregistrer l'image modifiée
     return image
 
+
 def plot_access(
     access_points,
     path_batiment,
@@ -30,7 +34,7 @@ def plot_access(
     echelle=100,
     path_computed=None,
     showed=True,
-    image = None
+    image=None,
 ):
     image_batiment = Image.open(path_batiment) if image is None else image.copy()
     icon = Image.open(path_icon)
@@ -57,7 +61,7 @@ def plot_position(
     echelle=100,
     path_computed=None,
     showed=True,
-    image = None
+    image=None,
 ):
     image_batiment = Image.open(path_batiment) if image is None else image.copy()
     icon = Image.open(path_icon)
@@ -84,7 +88,7 @@ def plot_access_user(
     echelle=100,
     path_computed=None,
     showed=True,
-    image = None
+    image=None,
 ):
     image_batiment = Image.open(path_batiment) if image is None else image.copy()
     icon_access = Image.open(path_icon_access)

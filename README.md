@@ -1,38 +1,44 @@
 # detect_user_building
 
-Grace aux points d'accès d'un batiment, on souhaite qu'un usager puisse connaitre où il se trouve dans ce batiment. Ce projet vise à résoudre ce problème quelque soit la dimension avec laquelle on voit le batiment.
+Grâce aux points d'accès d'un bâtiment, on souhaite qu'un usager puisse connaître où il se trouve dans ce bâtiment.
+Ce projet vise à résoudre ce problème, quelle que soit la dimension avec laquelle on voit le bâtiment.
 
-Pour cela il faut avoir un plan du batiment et une echelle où calculer la position (l'échelle initiale peut etre trop grande ou petite)
+Il est donc nécessaire d'avoir :
 
-On a :
+- le plan du bâtiment
+- l'échelle du bâtiment (où réaliser les calculs)
 
-* `datas`: dossier des fichiers exemple de type `csv` utilisés et générés
-* `main.py`: code d'exemple
-* `main.ipynb`: notebook de test des algorithmes `(Nous vous conseillons de le lire)`
-* `requirements.txt`: fichier de librairies python à installer
-* `src`: dossier contenant toutes les fonctions utiles au calcul de la position
+## Approches
 
-On pourait calculer cette position en utilisant :
+Considérons qu'on a les positions des points d'accès (On en avait pas :disappointed_relieved:)
 
-* les positions des points d'accès avec leurs signaux détectés :
-
-![Test de la détection](images/test2.png "Premier test de détection")
+On cherche la position contenue dans le champ commun des points d'accès
+![Test de la détection](images/test_a.png)
 ![Test de la détection](images/position_a.png)
 
-* un ensemble de signaux collectés à des positions précises du batiment
+Considérons qu'on a relevé leurs signaux à des positions données
 
-On pourrait fonctionner par similarité etre les signaux détectés de l'usager et ceux collectés à des positions précises du batiment
-
-![Test de la détection](images/test3.png "Deuxième test de détection (similarité)")
-![Test de la détection](images/position_c.png)
-
-On pourrait calculer les positions approximatives des points d'accès, puis de les utiliser pour calculer la position de l'usager.
-
-![Test de la détection](images/test4.png "Troisième test de détection (calcul des positions des points d'accès)")
+- On essaye d'estimer les positions des points d'accès, avant de calculer la position de l'usager :expressionless:
+![Test de la détection](images/test_ca.png "(calcul des positions des points d'accès)")
 ![Test de la détection](images/position_ca.png)
 
-Lors de la première exécution de la commande `python main.py -ca`, le fichier `datas/without_acces/access_points_compute.csv` contenant les positions calculés des points d'accès (contenues dans le fichier `datas/without_acces/BSSIDs_collected.csv`) est généré.
+- On cherche les positions (de zones collectées) les plus proches :smile:
+![Test de la détection](images/test_c.png "(similarité)")
+![Test de la détection](images/position_c.png)
 
-On peut donc imaginer que la première exécution prendra du temps.
+- On utilise un modèle d'apprentissage artificielle (de régression) entrainé pour prédire la position de l'usager :fire:
+![Test de la détection](images/test_ia.png "(IA)")
+![Test de la détection](images/position_ia.png)
 
-Cela implique que si on met à jour le fichier `datas/without_acces/BSSIDs_collected.csv`, si besoin il faudra suprimer le fichier `datas/without_acces/access_points_compute.csv`et exécuter la commande `python main.py -ca` pour recalculer les positions des points d'accès.
+## Ressources et Dépendances
+
+On a suivantes:
+
+- `requirements.txt`: fichier de librairies python à installer
+- `main.py`: code d'exemple d'utlisation
+- `main.ipynb`: notebook de test des algorithmes (sans le modèle d'IA) `(à lire)`
+- `detect_model.pkl`: fichier contenant le modèle entrainé (l'IA)
+- `ml.ipynb`: notebook d'entrainement et de test d'utilisation du modèle `(à lire)`
+- `datas`: dossier des fichiers contenant les signaux collectés (de type `csv`)
+- `src`: dossier contenant des fonctions utiles au calcul de la position
+- `images`: dossier contenant les images utiles
