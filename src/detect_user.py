@@ -1,4 +1,4 @@
-from numpy import sum, zeros, array, sqrt, argsort, nan
+from numpy import sum, zeros, array, sqrt, argsort
 from .detect_position import detect_position, distance
 
 
@@ -68,10 +68,10 @@ def detect_collected_compute_access(E, access_positions, d=distance, M0=None):
         W.append(E[k])
 
     if len(access_commun) != 0:
-        A = array(A)
-        W = array(W)
+        A = array(A, dtype=float)
+        W = array(W, dtype=float)
         M = detect_position(A, W, d=d, M0=M0)
-        return None if nan in M else M
+        return M
     return None
 
 

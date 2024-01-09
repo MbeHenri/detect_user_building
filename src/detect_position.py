@@ -48,9 +48,9 @@ def detect_position(A, W, d=distance, M0=[10, 9]):
 
     # calcul de la position
     if M0 is not None:
-        x0 = array(M0)
+        x0 = array(M0, dtype=float)
     else:
-        x0 = rand(A.shape[1]) * 11
+        x0 = rand(A.shape[1])
 
     M, objs = descente_gradient(f, gradf, x0)
 
