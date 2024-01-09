@@ -1,4 +1,4 @@
-from numpy import sum, zeros, array, sqrt, argsort, nan_to_num
+from numpy import sum, zeros, array, sqrt, argsort, nan
 from .detect_position import detect_position, distance
 
 
@@ -71,7 +71,7 @@ def detect_collected_compute_access(E, access_positions, d=distance, M0=None):
         A = array(A)
         W = array(W)
         M = detect_position(A, W, d=d, M0=M0)
-        return nan_to_num(M)
+        return None if nan in M else M
     return None
 
 
