@@ -1,4 +1,4 @@
-from numpy import sum, zeros, array, sqrt, argsort
+from numpy import sum, zeros, array, sqrt, argsort, nan_to_num
 from .detect_position import detect_position, distance
 
 
@@ -41,16 +41,16 @@ def detect_collected_sim(E, P, D, k=3, sim=cosine_similarity):
     dim = P.shape[1]
 
     M = zeros(dim)
-    sims = array([ sim(E, D[i]) for i in range(n) ])
-    
-    # indices des k premiers ensembles de signaux similaires 
+    sims = array([sim(E, D[i]) for i in range(n)])
+
+    # indices des k premiers ensembles de signaux similaires
     inds = argsort(sims)[-k:]
-    
+
     sm = 0
     for i in inds:
         M += sims[i] * P[i]
         sm += sims[i]
-    
+
     if sm != 0:
         return M / sm
 
@@ -70,7 +70,8 @@ def detect_collected_compute_access(E, access_positions, d=distance, M0=None):
     if len(access_commun) != 0:
         A = array(A)
         W = array(W)
-        return detect_position(A, W, d=d, M0=M0)
+        M = detect_position(A, W, d=d, M0=M0)
+        return nan_to_num(M)
     return None
 
 
