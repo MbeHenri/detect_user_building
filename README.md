@@ -10,12 +10,6 @@ Il est donc nécessaire d'avoir :
 
 ## Approches
 
-Considérons qu'on a les positions des points d'accès (On en avait pas :disappointed_relieved:)
-
-On cherche la position contenue dans le champ commun des points d'accès
-![Test de la détection](images/test_a.png)
-![Test de la détection](images/position_a.png)
-
 Considérons qu'on a relevé leurs signaux à des positions données
 
 - On essaye d'estimer les positions des points d'accès, avant de calculer la position de l'usager :expressionless:

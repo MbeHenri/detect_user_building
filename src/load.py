@@ -1,5 +1,9 @@
 from numpy import array
 from pandas import read_csv
+import time
+import platform
+import time
+import netifaces
 
 
 def load_acces_points_2d(path_csv):
@@ -45,3 +49,31 @@ def load_collected_user(path_csv):
     df = read_csv(path_csv, sep=";")
     E = df.set_index("BSSID").to_dict()["Signal(%)"]
     return E
+
+
+def load_signal_pc(waitsecs=1):
+    system = platform.system()
+    signals = {}
+    if system == "Windows":
+        import pywifi
+
+        wifi = pywifi.PyWiFi()
+        iface = wifi.interfaces()[0]
+        iface.scan()
+        time.sleep(waitsecs)
+        results = iface.scan_results()
+        for result in results:
+            signals[result.ssid] = result.signal
+
+    elif system == "Linux":
+        import wifi
+
+        interfaces = netifaces.interfaces()
+        for interface in interfaces:
+            if "wl" in interface:
+                cells = wifi.Cell.all(interface)
+                for cell in cells:
+                    signal = cell.quality.split("/")
+                    signal = (int(signal[0]) / int(signal[1])) * 100
+                    signals[cell.address] = signal
+    return signals

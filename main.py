@@ -1,5 +1,6 @@
 import sys
 from src.plot import plot_position, openImage
+from src.load import load_signal_pc
 
 
 def main(args):
@@ -9,30 +10,14 @@ def main(args):
         ECHELLE = 100
         image_batiment = openImage("./images/batiment.png")
 
-        if option == "-a":
-            from src.detect_user import detect_with_acces
-            from src.load import load_acces_points_2d
-
-            A, W = load_acces_points_2d("./datas/with_acces/BSSID.csv")
-            M = detect_with_acces(A, W)
-
-            print("[position détectée]  ")
-            print(f" M (x : {M[0]}, y : {M[1]})")
-
-            plot_position(
-                M,
-                None,
-                "./images/pointeur.png",
-                image=image_batiment,
-                path_computed="./position_compute.png",
-                echelle=ECHELLE,
-            )
-
-        elif option == "-c":
+        # on charge les signaux de l'usager
+        usager = load_signal_pc()
+        
+        if option == "-c":
             from src.detect_user import detect_collected_sim
-            from src.load import load_collected_user, load_collected_positions_2d
+            from src.load import load_collected_positions_2d
 
-            E = load_collected_user("./datas/without_acces/BSSID_user.csv")
+            E = usager
             P, D = load_collected_positions_2d(
                 "./datas/without_acces/BSSIDs_collected.csv"
             )
@@ -56,7 +41,6 @@ def main(args):
         elif option == "-ca":
             from src.load import (
                 load_to_compute_acces_points_2d,
-                load_collected_user,
                 load_acces_points_save_2d,
             )
             from src.detect_access_points import detect_collected_access
@@ -64,7 +48,7 @@ def main(args):
             from src.save import save_acces_points_2d
             from src.plot import plot_access
 
-            E = load_collected_user("./datas/without_acces/BSSID_user.csv")
+            E = usager
 
             try:
                 access_points = load_acces_points_save_2d(
@@ -107,10 +91,7 @@ def main(args):
                 print("[Aucune position détectée]  ")
 
         elif option == "-ia":
-            from src.load import load_to_compute_acces_points_2d, load_collected_user
-
-            usager = load_collected_user("./datas/without_acces/BSSID_user.csv")
-
+        
             # chargement et utilisation du modèle sauvegardé
             from pickle import load
 
@@ -133,8 +114,7 @@ def main(args):
 
     else:
         print("[USAGE]")
-        print("python main.py <-a|-c|-ca|-ia>\n")
-        print("-a : option si on a les positions des points d'accès")
+        print("python main.py <-c|-ca|-ia>\n")
         print(
             "-c : option si on a un ensemble de signaux collectés avec leurs positions (méthode par similarité)"
         )
