@@ -62,8 +62,8 @@ def main(args):
                 save_acces_points_2d(
                     access_points, "./datas/without_acces/access_points_compute.csv"
                 )
-
-            M, _ = detect_collected_compute_access(E, access_points)
+                
+            M = detect_collected_compute_access(E, access_points)
 
             if M is not None:
                 print("[Position détectée]  ")
