@@ -2,7 +2,6 @@ from numpy import array
 from pandas import read_csv
 import time
 import platform
-import time
 import netifaces
 
 
@@ -73,7 +72,5 @@ def load_signal_pc(waitsecs=1):
             if "wl" in interface:
                 cells = wifi.Cell.all(interface)
                 for cell in cells:
-                    signal = cell.quality.split("/")
-                    signal = (int(signal[0]) / int(signal[1])) * 100
-                    signals[cell.address] = signal
+                    signals[cell.address] = cell.signal
     return signals
