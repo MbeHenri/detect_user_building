@@ -62,7 +62,7 @@ def load_signal_pc(waitsecs=1):
         time.sleep(waitsecs)
         results = iface.scan_results()
         for result in results:
-            signals[result.ssid] = result.signal
+            signals[result.bssid] = result.signal
 
     elif system == "Linux":
         import wifi
