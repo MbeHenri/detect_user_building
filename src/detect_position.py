@@ -18,7 +18,7 @@ def distance(weight: float, a=-50, n=4):
     return pow(10, (a - weight) / (10 * n))
 
 
-def detect_position(A, W, d=distance, M0=[10, 9]):
+def detect_position(A, W, d=distance, M0=None):
     """Détection de la position de l'usager ou d'un point d'accès en considérant les forces de signaux détectés
 
     Args:

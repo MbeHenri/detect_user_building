@@ -8,7 +8,7 @@ import netifaces
 def load_acces_points_2d(path_csv):
     df = read_csv(path_csv, sep=";")
     A = df[["X", "Y"]].values
-    W = df["Signal(%)"].values
+    W = df["Signal"].values
     return A, W
 
 
@@ -18,7 +18,7 @@ def load_to_compute_acces_points_2d(path_csv):
     for bssid, signaux in df.groupby("BSSID"):
         C[bssid] = {}
         C[bssid]["A"] = signaux[["X", "Y"]].values
-        C[bssid]["W"] = signaux["Signal(%)"].values
+        C[bssid]["W"] = signaux["Signal"].values
     return C
 
 
@@ -37,7 +37,7 @@ def load_collected_positions_2d(path_csv):
     for position, signaux in df.groupby(["X", "Y"]):
         P.append(list(position))
         signaux_ = (
-            signaux[["BSSID", "Signal(%)"]].set_index("BSSID").to_dict()["Signal(%)"]
+            signaux[["BSSID", "Signal"]].set_index("BSSID").to_dict()["Signal"]
         )
         D.append(signaux_)
     P = array(P, dtype=float)
@@ -46,7 +46,7 @@ def load_collected_positions_2d(path_csv):
 
 def load_collected_user(path_csv):
     df = read_csv(path_csv, sep=";")
-    E = df.set_index("BSSID").to_dict()["Signal(%)"]
+    E = df.set_index("BSSID").to_dict()["Signal"]
     return E
 
 

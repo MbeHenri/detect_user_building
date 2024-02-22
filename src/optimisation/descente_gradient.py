@@ -3,7 +3,7 @@ from numpy import array
 
 
 # algorithme de descente de gradient
-def descente_gradient(f, gradf, x0, e=1e-4, max_iters=10000, verbose=False):
+def descente_gradient(f, gradf, x0, e=1e-1, max_iters=10000, verbose=False):
     # position initiale
     x = array(x0, dtype=float)
 
