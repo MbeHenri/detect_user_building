@@ -36,3 +36,24 @@ On a suivantes:
 - `datas`: dossier des fichiers contenant les signaux collectés (de type `csv`)
 - `src`: dossier contenant des fonctions utiles au calcul de la position
 - `images`: dossier contenant les images utiles
+
+## Lancement de l'entrainement avec mlflow
+
+- activation de l'environement virtuelle
+
+```bash
+source .venv/bin/activate
+```
+
+- lancement de mlflow
+
+```bash
+mlflow server
+```
+
+- lancement de l'entraiement
+
+```bash
+mkdir -p parametres
+python3 mlflow_train.py
+```

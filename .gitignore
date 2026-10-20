@@ -162,3 +162,12 @@ cython_debug/
 *compute*
 *_info
 venv
+.venv
+__pycache__
+*/__pycache__
+*/*/__pycache__
+
+mlflow.db
+parametres/
+mlartifacts/
+detect_model.pkl
