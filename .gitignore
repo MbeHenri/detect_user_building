@@ -168,6 +168,6 @@ __pycache__
 */*/__pycache__
 
 mlflow.db
-parametres/
+outputs/
 mlartifacts/
 detect_model.pkl

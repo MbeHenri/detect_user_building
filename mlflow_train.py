@@ -9,10 +9,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
 from src.load import load_collected_positions_2d
 from src.perfs import rmse, mse, mae
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
 
 # Configuration de MLflow
 mlflow.set_tracking_uri("http://127.0.0.1:5000")
-mlflow.set_experiment("Positionnement_2D_Regressors")
+mlflow.set_experiment("Detect_building")
 
 # Récuperation des positions et des signaux collectés
 P, D = load_collected_positions_2d("datas/without_acces/BSSIDs_collected.csv")
@@ -24,50 +26,83 @@ datas = preModel.fit_transform(D)
 
 
 # Définition des modèles de régression
-model = DecisionTreeRegressor()
+def DecisionTree():
+    return DecisionTreeRegressor()
 
+
+def KNN():
+    return KNeighborsRegressor()
+
+
+regressors = {"KNN": KNN, "DecisionTree": DecisionTree}
 
 # Définition des fonctions d'évaluation
-metrics = {"rmse": rmse, "mse": mse, "mae": mae, "r2": r2_score}
+metrics = {"rmse": rmse, "mse": mse, "mae": mae, "r2_score": r2_score}
 
 kf = KFold(n_splits=10, shuffle=True, random_state=42)
-perfs = {name_metric: [] for name_metric in metrics.keys()}
+perfs = {
+    name_model: {name_metric: [] for name_metric in metrics.keys()}
+    for name_model in regressors.keys()
+}
 
 # 1. Enregistrer le Pipeline de prétraitement global comme un artefact partagé
 with mlflow.start_run(run_name="Pre-processing_Pipeline"):
-    weights_pretrained_filename = "parameters/premodel_pipeline.joblib"
+    weights_pretrained_filename = "outputs/premodel_pipeline.joblib"
     joblib.dump(preModel, weights_pretrained_filename)
     mlflow.log_artifact(weights_pretrained_filename)
 
 # Entraînement et évaluation des modèles avec validation croisée
-# LANCEMENT GLOBALE
-with mlflow.start_run(run_name=f"Global_arbre_decision") as parent_run:
-    mlflow.log_param("model_type", "arbre_decision")
+for name_model, model_func in regressors.items():
+    with mlflow.start_run(run_name=f"global_{name_model}") as parent_run:
+        mlflow.log_param("model_type", f"{name_model}")
 
-    # Boucle de validation croisée
-    for fold, (train_index, test_index) in enumerate(kf.split(datas)):
-        X_train, X_test = datas[train_index], datas[test_index]
-        y_train, y_test = P[train_index], P[test_index]
+        table_data = {"Fold": [], "RMSE": [], "MSE": [], "MAE": [], "R2": []}
 
-        # RUN SPECIFIQUE A UNE SELECTION (TRAIN - TEST)
-        with mlflow.start_run(run_name=f"arbre_decision_Fold_{fold}", nested=True):
-            model = model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
+        # Boucle de validation croisée
+        for fold, (train_index, test_index) in enumerate(kf.split(datas)):
+            X_train, X_test = datas[train_index], datas[test_index]
+            y_train, y_test = P[train_index], P[test_index]
 
-            # Calcul et enregistrement des métriques
-            for name_metric in metrics.keys():
-                metric_value = metrics[name_metric](y_test, y_pred)
-                perfs[name_metric].append(metric_value)
-                mlflow.log_metric(name_metric, metric_value)
+            with mlflow.start_run(run_name=f"{name_model}_fold_{fold}", nested=True):
+                regressor = model_func()
+                model = regressor.fit(X_train, y_train)
+                y_pred = model.predict(X_test)
 
-            # SAUVEGARDE DES POIDS : Export du modèle de ce pli spécifique en .joblib
-            weight_filename = f"parameters/arbre_decision_fold_{fold}.joblib"
-            joblib.dump(model, weight_filename)
+                # Calcul des métriques pour le fold courant
+                fold_metrics = {}
+                for name_metric in metrics.keys():
+                    metric_value = metrics[name_metric](y_test, y_pred)
+                    perfs[name_model][name_metric].append(metric_value)
+                    mlflow.log_metric(name_metric, metric_value)
+                    fold_metrics[name_metric] = metric_value
 
-            # Téléversement du fichier de poids comme artefact de ce pli dans MLflow
-            mlflow.log_artifact(weight_filename, artifact_path="model_weights")
+                table_data["Fold"].append(fold)
+                table_data["RMSE"].append(fold_metrics["rmse"])
+                table_data["MSE"].append(fold_metrics["mse"])
+                table_data["MAE"].append(fold_metrics["mae"])
+                table_data["R2"].append(fold_metrics["r2_score"])
 
-    # Calcul et enregistrement des performances moyennes globales dans le RUN GLOBAL
-    for name_metric in metrics.keys():
-        mean_metric_value = mean(perfs[name_metric])
-        mlflow.log_metric(f"mean_{name_metric}", mean_metric_value)
+                # Sauvegarde du modèle
+                weight_filename = f"outputs/{name_model}_fold_{fold}.joblib"
+                joblib.dump(model, weight_filename)
+                mlflow.log_artifact(weight_filename, artifact_path="model_weights")
+
+        # Calcul et enregistrement des performances moyennes globales
+        for name_metric in metrics.keys():
+            mean_metric_value = mean(perfs[name_model][name_metric])
+            mlflow.log_metric(f"mean_{name_metric}", mean_metric_value)
+
+        # Log du tableau détaillé par fold
+        mlflow.log_table(data=table_data, artifact_file="perfs_by_fold.json")
+
+        # Enregistrer également le tableau récapitulatif moyen
+        summary_data = {
+            "Metric": ["RMSE", "MSE", "MAE", "R2"],
+            "Mean_Value": [
+                mean(perfs[name_model]["rmse"]),
+                mean(perfs[name_model]["mse"]),
+                mean(perfs[name_model]["mae"]),
+                mean(perfs[name_model]["r2_score"]),
+            ],
+        }
+        mlflow.log_table(data=summary_data, artifact_file="perfs_summary.json")
