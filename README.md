@@ -60,3 +60,11 @@ python3 mlflow_train.py
 # validation croisee
 python3 mlflow_validation_croisee.py
 ```
+
+## Captures mlflow
+
+- les pipelines d'entrainements
+![runs](images/mlflow_runs.png)
+
+- les modeles
+![modeles](images/mlflow_models.png)
