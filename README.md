@@ -51,9 +51,12 @@ source .venv/bin/activate
 mlflow server
 ```
 
-- lancement de l'entraiement
+- lancement des pipelines
 
 ```bash
-mkdir -p parametres
+# entrainement train - test
 python3 mlflow_train.py
+
+# validation croisee
+python3 mlflow_validation_croisee.py
 ```

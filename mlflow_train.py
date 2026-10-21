@@ -1,108 +1,102 @@
+import argparse
+from pathlib import Path
 import joblib
 import mlflow
-from numpy import mean
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import r2_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
 from src.load import load_collected_positions_2d
-from src.perfs import rmse, mse, mae
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.neighbors import KNeighborsRegressor
+from src.perfs import mae, mse, rmse
 
-# Configuration de MLflow
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
-mlflow.set_experiment("Detect_building")
-
-# Récuperation des positions et des signaux collectés
-P, D = load_collected_positions_2d("datas/without_acces/BSSIDs_collected.csv")
-
-preModel = Pipeline(
-    [("DicVect", DictVectorizer(sparse=False)), ("Scaler", StandardScaler())]
+# Gestion des arguments en ligne de commande
+parser = argparse.ArgumentParser(description="Entraînement Train/Test et suivi MLflow")
+parser.add_argument(
+    "--output-dir",
+    "-o",
+    type=str,
+    default="outputs",
+    help="Répertoire de sortie pour les artefacts sauvegardés localement (défaut: 'outputs')",
 )
-datas = preModel.fit_transform(D)
+args = parser.parse_args()
+
+# Création du dossier de sortie s'il n'existe pas
+output_dir = Path(args.output_dir)
+output_dir.mkdir(parents=True, exist_ok=True)
 
 
-# Définition des modèles de régression
-def DecisionTree():
-    return DecisionTreeRegressor()
+if __name__ == "__main__":
 
+    # Configuration de MLflow
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
+    mlflow.set_experiment("Detect_building_traintest")
 
-def KNN():
-    return KNeighborsRegressor()
+    # Récupération des positions (P) et des signaux collectés (D)
+    P, D = load_collected_positions_2d("datas/without_acces/BSSIDs_collected.csv")
 
+    # Découpage simple en Train / Test (80% train, 20% test)
+    D_train, D_test, y_train, y_test = train_test_split(
+        D, P, test_size=0.2, random_state=42
+    )
 
-regressors = {"KNN": KNN, "DecisionTree": DecisionTree}
+    # Prétraitement : fit sur le Train, transform sur Train et Test
+    preModel = Pipeline(
+        [("DicVect", DictVectorizer(sparse=False)), ("Scaler", StandardScaler())]
+    )
+    X_train = preModel.fit_transform(D_train)
+    X_test = preModel.transform(D_test)
 
-# Définition des fonctions d'évaluation
-metrics = {"rmse": rmse, "mse": mse, "mae": mae, "r2_score": r2_score}
+    # Enregistrer le Pipeline de prétraitement comme un artefact MLflow
+    with mlflow.start_run(run_name="Pre-processing_Pipeline"):
+        weights_pretrained_filename = output_dir / "premodel_pipeline.joblib"
+        joblib.dump(preModel, weights_pretrained_filename)
+        mlflow.log_artifact(str(weights_pretrained_filename))
 
-kf = KFold(n_splits=10, shuffle=True, random_state=42)
-perfs = {
-    name_model: {name_metric: [] for name_metric in metrics.keys()}
-    for name_model in regressors.keys()
-}
+    # Définition des modèles
+    regressors = {
+        "KNN": KNeighborsRegressor(),
+        "DecisionTree": DecisionTreeRegressor(),
+    }
 
-# 1. Enregistrer le Pipeline de prétraitement global comme un artefact partagé
-with mlflow.start_run(run_name="Pre-processing_Pipeline"):
-    weights_pretrained_filename = "outputs/premodel_pipeline.joblib"
-    joblib.dump(preModel, weights_pretrained_filename)
-    mlflow.log_artifact(weights_pretrained_filename)
+    # Définition des métriques
+    metrics = {"rmse": rmse, "mse": mse, "mae": mae, "r2_score": r2_score}
 
-# Entraînement et évaluation des modèles avec validation croisée
-for name_model, model_func in regressors.items():
-    with mlflow.start_run(run_name=f"global_{name_model}") as parent_run:
-        mlflow.log_param("model_type", f"{name_model}")
+    # Entraînement et évaluation pour chaque modèle
+    for name_model, model in regressors.items():
+        with mlflow.start_run(run_name=f"run_{name_model}"):
+            mlflow.log_param("model_type", name_model)
 
-        table_data = {"Fold": [], "RMSE": [], "MSE": [], "MAE": [], "R2": []}
+            # Entraînement du modèle
+            model.fit(X_train, y_train)
 
-        # Boucle de validation croisée
-        for fold, (train_index, test_index) in enumerate(kf.split(datas)):
-            X_train, X_test = datas[train_index], datas[test_index]
-            y_train, y_test = P[train_index], P[test_index]
+            # Log du modèle dans MLflow
+            model_info = mlflow.sklearn.log_model(
+                sk_model=model,
+                name=name_model,
+                input_example=X_train[:5],
+                serialization_format="cloudpickle",
+            )
 
-            with mlflow.start_run(run_name=f"{name_model}_fold_{fold}", nested=True):
-                regressor = model_func()
-                model = regressor.fit(X_train, y_train)
-                y_pred = model.predict(X_test)
+            # Prédictions et calcul des métriques
+            y_pred = model.predict(X_test)
 
-                # Calcul des métriques pour le fold courant
-                fold_metrics = {}
-                for name_metric in metrics.keys():
-                    metric_value = metrics[name_metric](y_test, y_pred)
-                    perfs[name_model][name_metric].append(metric_value)
-                    mlflow.log_metric(name_metric, metric_value)
-                    fold_metrics[name_metric] = metric_value
+            eval_results = {}
+            for metric_name, metric_func in metrics.items():
+                value = metric_func(y_test, y_pred)
+                eval_results[metric_name] = value
+                mlflow.log_metric(metric_name, value)
 
-                table_data["Fold"].append(fold)
-                table_data["RMSE"].append(fold_metrics["rmse"])
-                table_data["MSE"].append(fold_metrics["mse"])
-                table_data["MAE"].append(fold_metrics["mae"])
-                table_data["R2"].append(fold_metrics["r2_score"])
+            # Sauvegarde locale du modèle dans le répertoire spécifié
+            weight_filename = output_dir / f"{name_model}.joblib"
+            joblib.dump(model, weight_filename)
+            mlflow.log_artifact(str(weight_filename), artifact_path="model_weights")
 
-                # Sauvegarde du modèle
-                weight_filename = f"outputs/{name_model}_fold_{fold}.joblib"
-                joblib.dump(model, weight_filename)
-                mlflow.log_artifact(weight_filename, artifact_path="model_weights")
-
-        # Calcul et enregistrement des performances moyennes globales
-        for name_metric in metrics.keys():
-            mean_metric_value = mean(perfs[name_model][name_metric])
-            mlflow.log_metric(f"mean_{name_metric}", mean_metric_value)
-
-        # Log du tableau détaillé par fold
-        mlflow.log_table(data=table_data, artifact_file="perfs_by_fold.json")
-
-        # Enregistrer également le tableau récapitulatif moyen
-        summary_data = {
-            "Metric": ["RMSE", "MSE", "MAE", "R2"],
-            "Mean_Value": [
-                mean(perfs[name_model]["rmse"]),
-                mean(perfs[name_model]["mse"]),
-                mean(perfs[name_model]["mae"]),
-                mean(perfs[name_model]["r2_score"]),
-            ],
-        }
-        mlflow.log_table(data=summary_data, artifact_file="perfs_summary.json")
+            # Sauvegarde d'un tableau synthétique des performances
+            summary_data = {
+                "Metric": list(eval_results.keys()),
+                "Value": list(eval_results.values()),
+            }
+            mlflow.log_table(data=summary_data, artifact_file="perfs_summary.json")
