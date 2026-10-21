@@ -68,3 +68,17 @@ python3 mlflow_validation_croisee.py
 
 - les modeles
 ![modeles](images/mlflow_models.png)
+
+
+## gestion de dvc
+
+```bash
+# chargement des donnees depuis la source de donnees distance
+dvc pull
+
+# calcul du fichier empreintes des repertoires des poids outputs.dvc
+dvc add outputs
+
+# envoie les donnees du repertoires outputs, s'il y'a changement entre l'ancien fichier .dvc et le nouveau
+dvc push
+```
