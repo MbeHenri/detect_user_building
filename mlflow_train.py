@@ -9,17 +9,18 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
+from src.distributions import evaluate_and_save_gaussian_kl
 from src.load import load_collected_positions_2d
 from src.perfs import mae, mse, rmse
 
-# Gestion des arguments en ligne de commande
+# Gestion des arguments
 parser = argparse.ArgumentParser(description="Entraînement Train/Test et suivi MLflow")
 parser.add_argument(
     "--output-dir",
     "-o",
     type=str,
     default="outputs",
-    help="Répertoire de sortie pour les artefacts sauvegardés localement (défaut: 'outputs')",
+    help="Répertoire de sortie pour les artefacts (défaut: './outputs')",
 )
 args = parser.parse_args()
 
@@ -49,13 +50,28 @@ if __name__ == "__main__":
     X_train = preModel.fit_transform(D_train)
     X_test = preModel.transform(D_test)
 
-    # Enregistrer le Pipeline de prétraitement comme un artefact MLflow
-    with mlflow.start_run(run_name="Pre-processing_Pipeline"):
+    # Calcul de la difference statistiques D_KL entre les donnees d'entrainement et les donnees de test
+    # Avec sauvegarde de leurs distributions
+    feature_names = preModel.named_steps["DicVect"].get_feature_names_out()
+    dist_filepath = output_dir / "gaussian_distributions_kl.json"
+
+    mean_kl = evaluate_and_save_gaussian_kl(
+        X_train=X_train,
+        X_test=X_test,
+        feature_names=feature_names,
+        output_filepath=dist_filepath,
+    )
+
+    # Enregistrement du pipeline et des distributions dans MLflow
+    with mlflow.start_run(run_name="Pre-processing_&_Distributions"):
         weights_pretrained_filename = output_dir / "premodel_pipeline.joblib"
         joblib.dump(preModel, weights_pretrained_filename)
         mlflow.log_artifact(str(weights_pretrained_filename))
 
-    # Définition des modèles
+        mlflow.log_artifact(str(dist_filepath), artifact_path="distributions")
+        mlflow.log_metric("dataset_mean_kl_divergence", mean_kl)
+
+    # Définition des modèles et métriques
     regressors = {
         "KNN": KNeighborsRegressor(),
         "DecisionTree": DecisionTreeRegressor(),
@@ -72,31 +88,52 @@ if __name__ == "__main__":
             # Entraînement du modèle
             model.fit(X_train, y_train)
 
-            # Log du modèle dans MLflow
-            model_info = mlflow.sklearn.log_model(
+            mlflow.sklearn.log_model(
                 sk_model=model,
                 name=name_model,
                 input_example=X_train[:5],
                 serialization_format="cloudpickle",
             )
 
-            # Prédictions et calcul des métriques
-            y_pred = model.predict(X_test)
+            # Prédictions
+            y_pred_train = model.predict(X_train)
+            y_pred_test = model.predict(X_test)
 
-            eval_results = {}
+            # Evaluation des métriques
+            eval_results = []
             for metric_name, metric_func in metrics.items():
-                value = metric_func(y_test, y_pred)
-                eval_results[metric_name] = value
-                mlflow.log_metric(metric_name, value)
+                perf_train = metric_func(y_train, y_pred_train)
+                perf_test = metric_func(y_test, y_pred_test)
 
-            # Sauvegarde locale du modèle dans le répertoire spécifié
+                # Écart relatif / D_KL(P_test || P_train)
+                delta_perf = perf_train - perf_test
+                sensitivity = delta_perf / mean_kl if mean_kl != 0 else 0.0
+
+                mlflow.log_metric(f"{metric_name}_train", perf_train)
+                mlflow.log_metric(f"{metric_name}_test", perf_test)
+                mlflow.log_metric(f"{metric_name}_delta", delta_perf)
+                mlflow.log_metric(f"{metric_name}_sensitivity", sensitivity)
+
+                eval_results.append(
+                    {
+                        "Metric": metric_name,
+                        "Train": perf_train,
+                        "Test": perf_test,
+                        "Delta": delta_perf,
+                        "Sensitivity": sensitivity,
+                    }
+                )
+
+            summary_table = {
+                "Metric": [row["Metric"] for row in eval_results],
+                "Perf_Train": [row["Train"] for row in eval_results],
+                "Perf_Test": [row["Test"] for row in eval_results],
+                "Delta_Perf": [row["Delta"] for row in eval_results],
+                "Sensitivity": [row["Sensitivity"] for row in eval_results],
+            }
+            mlflow.log_table(data=summary_table, artifact_file="perfs_summary.json")
+
+            # sauvegarde du modèle dans MLflow
             weight_filename = output_dir / f"{name_model}.joblib"
             joblib.dump(model, weight_filename)
             mlflow.log_artifact(str(weight_filename), artifact_path="model_weights")
-
-            # Sauvegarde d'un tableau synthétique des performances
-            summary_data = {
-                "Metric": list(eval_results.keys()),
-                "Value": list(eval_results.values()),
-            }
-            mlflow.log_table(data=summary_data, artifact_file="perfs_summary.json")
