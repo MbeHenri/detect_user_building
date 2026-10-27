@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 import joblib
 import mlflow
@@ -50,8 +51,8 @@ if __name__ == "__main__":
     X_train = preModel.fit_transform(D_train)
     X_test = preModel.transform(D_test)
 
-    # Calcul de la difference statistiques D_KL entre les donnees d'entrainement et les donnees de test
-    # Avec sauvegarde de leurs distributions
+    # Calcul de la divergence D_KL entre les données de test et d'entraînement
+    # et sauvegarde locale du fichier de distribution
     feature_names = preModel.named_steps["DicVect"].get_feature_names_out()
     dist_filepath = output_dir / "gaussian_distributions_kl.json"
 
@@ -100,12 +101,12 @@ if __name__ == "__main__":
             y_pred_test = model.predict(X_test)
 
             # Evaluation des métriques
-            eval_results = []
+            summary_table = {}
             for metric_name, metric_func in metrics.items():
-                perf_train = metric_func(y_train, y_pred_train)
-                perf_test = metric_func(y_test, y_pred_test)
+                perf_train = float(metric_func(y_train, y_pred_train))
+                perf_test = float(metric_func(y_test, y_pred_test))
 
-                # Écart relatif / D_KL(P_test || P_train)
+                # calcul de la sensibilité par rapport à la divergence KL
                 delta_perf = perf_train - perf_test
                 sensitivity = delta_perf / mean_kl if mean_kl != 0 else 0.0
 
@@ -114,24 +115,30 @@ if __name__ == "__main__":
                 mlflow.log_metric(f"{metric_name}_delta", delta_perf)
                 mlflow.log_metric(f"{metric_name}_sensitivity", sensitivity)
 
-                eval_results.append(
-                    {
-                        "Metric": metric_name,
-                        "Train": perf_train,
-                        "Test": perf_test,
-                        "Delta": delta_perf,
-                        "Sensitivity": sensitivity,
-                    }
-                )
+                summary_table[metric_name] = {
+                    "train": perf_train,
+                    "test": perf_test,
+                    "delta": delta_perf,
+                    "sensitivity": sensitivity,
+                }
 
-            summary_table = {
-                "Metric": [row["Metric"] for row in eval_results],
-                "Perf_Train": [row["Train"] for row in eval_results],
-                "Perf_Test": [row["Test"] for row in eval_results],
-                "Delta_Perf": [row["Delta"] for row in eval_results],
-                "Sensitivity": [row["Sensitivity"] for row in eval_results],
+            # Sauvegarde locale du fichier JSON des performances
+            summary_filepath = output_dir / f"{name_model}_perfs_summary.json"
+            with open(summary_filepath, "w") as f:
+                json.dump(summary_table, f, indent=4)
+
+            # Formatage des données pour MLflow et sauvegarde dans MLflow
+            mlflow_table_format = {
+                "Metric": list(summary_table.keys()),
+                "Perf_Train": [v["train"] for v in summary_table.values()],
+                "Perf_Test": [v["test"] for v in summary_table.values()],
+                "Delta_Perf": [v["delta"] for v in summary_table.values()],
+                "Sensitivity": [v["sensitivity"] for v in summary_table.values()],
             }
-            mlflow.log_table(data=summary_table, artifact_file="perfs_summary.json")
+            mlflow.log_table(
+                data=mlflow_table_format, artifact_file="perfs_summary.json"
+            )
+            mlflow.log_artifact(str(summary_filepath), artifact_path="metrics_summary")
 
             # sauvegarde du modèle dans MLflow
             weight_filename = output_dir / f"{name_model}.joblib"
