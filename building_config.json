@@ -1,0 +1,5 @@
+{
+    "image_batiment": "./images/batiment.png",
+    "image_curseur": "./images/pointeur.png",
+    "echelle": 100
+}

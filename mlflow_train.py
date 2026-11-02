@@ -1,8 +1,10 @@
 import argparse
+from datetime import datetime
 import json
 from pathlib import Path
 import joblib
 import mlflow
+from mlflow.models.signature import infer_signature
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
@@ -37,6 +39,9 @@ output_dir.mkdir(parents=True, exist_ok=True)
 
 if __name__ == "__main__":
 
+    # Date de l'entrainement
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     # Configuration de MLflow
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
     mlflow.set_experiment("Detect_building_traintest")
@@ -57,7 +62,6 @@ if __name__ == "__main__":
     X_test = preModel.transform(D_test)
 
     # Calcul des distributions, KL et Surprisals
-    feature_names = preModel.named_steps["DicVect"].get_feature_names_out()
     dist_filepath = output_dir / "distributions_and_kl.json"
 
     kl_results, surprisal_results = evaluate_and_save_gaussian_kl(
@@ -67,11 +71,11 @@ if __name__ == "__main__":
         n_bins=args.n_bins,
     )
 
-    # Log MLflow des métriques de distribution
-    with mlflow.start_run(run_name="Pre-processing_&_Distributions"):
+    # Log MLflow des métriques de distribution et Poids du preModel seul
+    with mlflow.start_run(run_name=f"Pre-processing_&_Distributions_{timestamp}"):
         weights_pretrained_filename = output_dir / "premodel_pipeline.joblib"
         joblib.dump(preModel, weights_pretrained_filename)
-        mlflow.log_artifact(str(weights_pretrained_filename))
+        mlflow.log_artifact(str(weights_pretrained_filename), artifact_path="premodel")
 
         mlflow.log_artifact(str(dist_filepath), artifact_path="distributions")
 
@@ -118,30 +122,50 @@ if __name__ == "__main__":
 
     # Entraînement et évaluation pour chaque modèle
     for name_model, model in regressors.items():
-        with mlflow.start_run(run_name=f"run_{name_model}"):
+        run_name = f"run_{name_model}_{timestamp}"
+        registered_model_name = f"WiFi_Building_Detector_{name_model}"
+
+        with mlflow.start_run(run_name=run_name):
+            mlflow.set_tags(
+                {
+                    "model_family": name_model,
+                    "framework": "scikit-learn",
+                    "timestamp": timestamp,
+                }
+            )
             mlflow.log_param("model_type", name_model)
 
-            # Entraînement du modèle
+            # Entraînement du modèle seul
             model.fit(X_train, y_train)
 
+            # Création du Pipeline complet (Prétraitement + Modèle)
+            full_pipeline = Pipeline([("preModel", preModel), ("regressor", model)])
+
+            # Prédictions d'exemple pour déduire explicitement la signature MLflow
+            sample_input = D_test[:2]
+            sample_pred = full_pipeline.predict(sample_input)
+            signature = infer_signature(sample_input, sample_pred)
+
+            # Enregistrement du Pipeline complet dans MLflow Registry avec sa signature
             mlflow.sklearn.log_model(
-                sk_model=model,
+                sk_model=full_pipeline,
                 name=name_model,
-                input_example=X_train[:5],
+                registered_model_name=registered_model_name,
+                signature=signature,
                 serialization_format="cloudpickle",
             )
 
-            # Prédictions
+            # Prédictions globales
             y_pred_train = model.predict(X_train)
             y_pred_test = model.predict(X_test)
 
-            # Evaluation des métriques
+            # Évaluation des métriques
             summary_table = {}
             for metric_name, metric_func in metrics.items():
                 perf_train = float(metric_func(y_train, y_pred_train))
                 perf_test = float(metric_func(y_test, y_pred_test))
 
-                # calcul de la sensibilité par rapport à la divergence KL
+                # Calcul de la sensibilité par rapport à la divergence KL
                 delta_perf = perf_train - perf_test
 
                 sensitivity_gaussian = (
@@ -196,7 +220,14 @@ if __name__ == "__main__":
             )
             mlflow.log_artifact(str(summary_filepath), artifact_path="metrics_summary")
 
-            # sauvegarde du modèle dans MLflow
-            weight_filename = output_dir / f"{name_model}.joblib"
-            joblib.dump(model, weight_filename)
-            mlflow.log_artifact(str(weight_filename), artifact_path="model_weights")
+            # 2. Sauvegarde locale du modèle de détection seul (ex: KNN.joblib)
+            model_only_filename = output_dir / f"{name_model}.joblib"
+            joblib.dump(model, model_only_filename)
+            mlflow.log_artifact(str(model_only_filename), artifact_path="model_weights")
+
+            # 3. Sauvegarde locale de la combinaison Pipeline complet (ex: KNN_full_pipeline.joblib)
+            full_pipeline_filename = output_dir / f"{name_model}_full_pipeline.joblib"
+            joblib.dump(full_pipeline, full_pipeline_filename)
+            mlflow.log_artifact(
+                str(full_pipeline_filename), artifact_path="full_pipeline_weights"
+            )
