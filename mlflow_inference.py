@@ -84,7 +84,7 @@ if __name__ == "__main__":
         image_batiment,
         image_curseur,
         echelle=echelle,
-        showed=False,
+        path_computed="./position_compute.png",
     )
 
     plt.imshow(image)

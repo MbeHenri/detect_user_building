@@ -75,17 +75,34 @@ python3 mlflow_inference.py
 
 ```
 
+- Promotion d'un modele entrainee dans MLFlow en production ou en stagging
+
+```bash
+# en production
+python mlflow_promote_alias.py -m outputs/DecisionTree_run_info.json -a production
+# en staging
+python mlflow_promote_alias.py -m outputs/KNN_run_info.json -a staging
+
+# python mlflow_promote_alias.py --help pour avoir l'aide
+```
+
 ### Captures
 
 - Entrainements
+  ![legacy_train](images/legacy_train.png)
+  ![mlflow_train](images/mlflow_train.png)
 
-- Test d'inferences
+- promotions MLFlow : etiquetage pour un environement (production / staging)
+  ![promotions](images/mlflow_promote.png)
 
-- les pipelines d'entrainements de MLFlow
+- les runs d'entrainements de MLFlow
   ![runs](images/mlflow_runs.png)
 
 - les modeles de MLFlow
   ![modeles](images/mlflow_models.png)
+
+- registre des modeles de MLFlow
+  ![register](images/mlflow_register.png)
 
 ### gestion de parametres obtenues avec dvc
 

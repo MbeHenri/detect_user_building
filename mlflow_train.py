@@ -71,8 +71,12 @@ if __name__ == "__main__":
         n_bins=args.n_bins,
     )
 
-    # Log MLflow des métriques de distribution et Poids du preModel seul
-    with mlflow.start_run(run_name=f"Pre-processing_&_Distributions_{timestamp}"):
+    # Run de Prétraitement
+    with mlflow.start_run(
+        run_name=f"Pre-processing_&_Distributions_{timestamp}"
+    ) as prep_run:
+        prep_run_id = prep_run.info.run_id
+
         weights_pretrained_filename = output_dir / "premodel_pipeline.joblib"
         joblib.dump(preModel, weights_pretrained_filename)
         mlflow.log_artifact(str(weights_pretrained_filename), artifact_path="premodel")
@@ -111,6 +115,18 @@ if __name__ == "__main__":
             surprisal_results["histogram"]["surprisal_std"],
         )
 
+        # Sauvegarde locale JSON pour le preModel
+        premodel_info = {
+            "run_id": prep_run_id,
+            "artifact_path": "premodel/premodel_pipeline.joblib",
+            "timestamp": timestamp,
+        }
+        premodel_info_file = output_dir / "premodel_info.json"
+        with open(premodel_info_file, "w") as f:
+            json.dump(premodel_info, f, indent=4)
+
+        mlflow.log_artifact(str(premodel_info_file), artifact_path="metadata")
+
     # Définition et évaluation des régresseurs
     regressors = {
         "KNN": KNeighborsRegressor(),
@@ -125,12 +141,15 @@ if __name__ == "__main__":
         run_name = f"run_{name_model}_{timestamp}"
         registered_model_name = f"WiFi_Building_Detector_{name_model}"
 
-        with mlflow.start_run(run_name=run_name):
+        with mlflow.start_run(run_name=run_name) as model_run:
+            current_run_id = model_run.info.run_id
+
             mlflow.set_tags(
                 {
                     "model_family": name_model,
                     "framework": "scikit-learn",
                     "timestamp": timestamp,
+                    "premodel_run_id": prep_run_id,
                 }
             )
             mlflow.log_param("model_type", name_model)
@@ -146,10 +165,10 @@ if __name__ == "__main__":
             sample_pred = full_pipeline.predict(sample_input)
             signature = infer_signature(sample_input, sample_pred)
 
-            # Enregistrement du Pipeline complet dans MLflow Registry avec sa signature
-            mlflow.sklearn.log_model(
+            # Enregistrement dans le Model Registry MLflow
+            model_info = mlflow.sklearn.log_model(
                 sk_model=full_pipeline,
-                name=name_model,
+                name=f"{name_model}_{timestamp}",
                 registered_model_name=registered_model_name,
                 signature=signature,
                 serialization_format="cloudpickle",
@@ -197,7 +216,7 @@ if __name__ == "__main__":
                     "sensitivity_histogram": sensitivity_histogram,
                 }
 
-            # Sauvegarde locale du fichier JSON des performances
+            # Artefacts locaux
             summary_filepath = output_dir / f"{name_model}_perfs_summary.json"
             with open(summary_filepath, "w") as f:
                 json.dump(summary_table, f, indent=4)
@@ -220,14 +239,29 @@ if __name__ == "__main__":
             )
             mlflow.log_artifact(str(summary_filepath), artifact_path="metrics_summary")
 
-            # 2. Sauvegarde locale du modèle de détection seul (ex: KNN.joblib)
+            # Sauvegarde locale du modèle de détection seul
             model_only_filename = output_dir / f"{name_model}.joblib"
             joblib.dump(model, model_only_filename)
             mlflow.log_artifact(str(model_only_filename), artifact_path="model_weights")
 
-            # 3. Sauvegarde locale de la combinaison Pipeline complet (ex: KNN_full_pipeline.joblib)
+            # Sauvegarde locale de la combinaison Pipeline complet (ex: KNN_full_pipeline.joblib)
             full_pipeline_filename = output_dir / f"{name_model}_full_pipeline.joblib"
             joblib.dump(full_pipeline, full_pipeline_filename)
             mlflow.log_artifact(
                 str(full_pipeline_filename), artifact_path="full_pipeline_weights"
             )
+
+            # Création du fichier JSON de métadonnées générique pour le modèle
+            run_metadata = {
+                "model_name": name_model,
+                "registered_model_name": registered_model_name,
+                "model_version": model_info.registered_model_version,
+                "run_id": current_run_id,
+                "premodel_run_id": prep_run_id,
+                "timestamp": timestamp,
+            }
+            run_info_filepath = output_dir / f"{name_model}_run_info.json"
+            with open(run_info_filepath, "w") as f:
+                json.dump(run_metadata, f, indent=4)
+
+            mlflow.log_artifact(str(run_info_filepath), artifact_path="metadata")

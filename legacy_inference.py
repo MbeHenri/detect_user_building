@@ -65,6 +65,7 @@ if __name__ == "__main__":
         image_batiment,
         image_curseur,
         echelle=echelle,
+        path_computed="./position_compute.png",
         showed=False,
     )
 
