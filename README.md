@@ -37,7 +37,9 @@ On a suivantes:
 - `src`: dossier contenant des fonctions utiles au calcul de la position
 - `images`: dossier contenant les images utiles
 
-## Lancement de l'entrainement avec mlflow
+## Machin Learning
+
+### Entrainement / Experiences et inferences
 
 - activation de l'environement virtuelle
 
@@ -45,32 +47,47 @@ On a suivantes:
 source .venv/bin/activate
 ```
 
-- lancement de mlflow
-
-```bash
-mlflow server
-```
-
-- lancement des pipelines
+- en legacy
 
 ```bash
 # entrainement train - test
-python3 mlflow_train.py
+python3 leagacy_train.py
+# python3 leagacy_train.py --help pour avoir de l'aide
 
-# validation croisee
-python3 mlflow_validation_croisee.py
+# inference
+python3 legacy_inference.py
+# python3 legacy_inference.py --help pour avoir de l'aide
 ```
 
-## Captures mlflow
+- avec mlflow
 
-- les pipelines d'entrainements
-![runs](images/mlflow_runs.png)
+```bash
+# lancement du serveur (si cen'est pas encore fait dans un terminal a part)
+mlflow server
 
-- les modeles
-![modeles](images/mlflow_models.png)
+# entrainement train - test
+python3 mlflow_train.py
+# python3 mlflow_train.py --help pour avoir de l'aide
 
+# inference
+python3 mlflow_inference.py
+# python3 mlflow_inference.py --help pour avoir de l'aide
 
-## gestion de dvc
+```
+
+### Captures
+
+- Entrainements
+
+- Test d'inferences
+
+- les pipelines d'entrainements de MLFlow
+  ![runs](images/mlflow_runs.png)
+
+- les modeles de MLFlow
+  ![modeles](images/mlflow_models.png)
+
+### gestion de parametres obtenues avec dvc
 
 ```bash
 # chargement des donnees depuis la source de donnees distance
