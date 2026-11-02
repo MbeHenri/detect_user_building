@@ -23,9 +23,14 @@ parser.add_argument(
     default="outputs",
     help="Répertoire de sortie pour les artefacts (défaut: './outputs')",
 )
+parser.add_argument(
+    "--n-bins",
+    type=int,
+    default=20,
+    help="Nombre de bins pour la discrétisation par histogramme (défaut: 20)",
+)
 args = parser.parse_args()
 
-# Création du dossier de sortie s'il n'existe pas
 output_dir = Path(args.output_dir)
 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,28 +56,58 @@ if __name__ == "__main__":
     X_train = preModel.fit_transform(D_train)
     X_test = preModel.transform(D_test)
 
-    # Calcul de la divergence D_KL entre les données de test et d'entraînement
-    # et sauvegarde locale du fichier de distribution
+    # Calcul des distributions, KL et Surprisals
     feature_names = preModel.named_steps["DicVect"].get_feature_names_out()
-    dist_filepath = output_dir / "gaussian_distributions_kl.json"
+    dist_filepath = output_dir / "distributions_and_kl.json"
 
-    mean_kl = evaluate_and_save_gaussian_kl(
+    kl_results, surprisal_results = evaluate_and_save_gaussian_kl(
         X_train=X_train,
         X_test=X_test,
-        feature_names=feature_names,
         output_filepath=dist_filepath,
+        n_bins=args.n_bins,
     )
 
-    # Enregistrement du pipeline et des distributions dans MLflow
+    # Log MLflow des métriques de distribution
     with mlflow.start_run(run_name="Pre-processing_&_Distributions"):
         weights_pretrained_filename = output_dir / "premodel_pipeline.joblib"
         joblib.dump(preModel, weights_pretrained_filename)
         mlflow.log_artifact(str(weights_pretrained_filename))
 
         mlflow.log_artifact(str(dist_filepath), artifact_path="distributions")
-        mlflow.log_metric("dataset_mean_kl_divergence", mean_kl)
 
-    # Définition des modèles et métriques
+        # 1. Divergences KL
+        mlflow.log_metric("kl_divergence_gaussian", kl_results["gaussian"])
+        mlflow.log_metric("kl_divergence_histogram", kl_results["histogram"])
+
+        # 2. Statistiques de Surprise Gaussienne
+        mlflow.log_metric(
+            "test_surprisal_gaussian_mean",
+            surprisal_results["gaussian"]["surprisal_mean"],
+        )
+        mlflow.log_metric(
+            "test_surprisal_gaussian_median",
+            surprisal_results["gaussian"]["surprisal_median"],
+        )
+        mlflow.log_metric(
+            "test_surprisal_gaussian_std",
+            surprisal_results["gaussian"]["surprisal_std"],
+        )
+
+        # 3. Statistiques de Surprise Histogramme
+        mlflow.log_metric(
+            "test_surprisal_histogram_mean",
+            surprisal_results["histogram"]["surprisal_mean"],
+        )
+        mlflow.log_metric(
+            "test_surprisal_histogram_median",
+            surprisal_results["histogram"]["surprisal_median"],
+        )
+        mlflow.log_metric(
+            "test_surprisal_histogram_std",
+            surprisal_results["histogram"]["surprisal_std"],
+        )
+
+    # Définition et évaluation des régresseurs
     regressors = {
         "KNN": KNeighborsRegressor(),
         "DecisionTree": DecisionTreeRegressor(),
@@ -108,18 +143,34 @@ if __name__ == "__main__":
 
                 # calcul de la sensibilité par rapport à la divergence KL
                 delta_perf = perf_train - perf_test
-                sensitivity = delta_perf / mean_kl if mean_kl != 0 else 0.0
+
+                sensitivity_gaussian = (
+                    delta_perf / kl_results["gaussian"]
+                    if kl_results["gaussian"] != 0
+                    else 0.0
+                )
+                sensitivity_histogram = (
+                    delta_perf / kl_results["histogram"]
+                    if kl_results["histogram"] != 0
+                    else 0.0
+                )
 
                 mlflow.log_metric(f"{metric_name}_train", perf_train)
                 mlflow.log_metric(f"{metric_name}_test", perf_test)
                 mlflow.log_metric(f"{metric_name}_delta", delta_perf)
-                mlflow.log_metric(f"{metric_name}_sensitivity", sensitivity)
+                mlflow.log_metric(
+                    f"{metric_name}_sensitivity_gaussian", sensitivity_gaussian
+                )
+                mlflow.log_metric(
+                    f"{metric_name}_sensitivity_histogram", sensitivity_histogram
+                )
 
                 summary_table[metric_name] = {
                     "train": perf_train,
                     "test": perf_test,
                     "delta": delta_perf,
-                    "sensitivity": sensitivity,
+                    "sensitivity_gaussian": sensitivity_gaussian,
+                    "sensitivity_histogram": sensitivity_histogram,
                 }
 
             # Sauvegarde locale du fichier JSON des performances
@@ -133,7 +184,12 @@ if __name__ == "__main__":
                 "Perf_Train": [v["train"] for v in summary_table.values()],
                 "Perf_Test": [v["test"] for v in summary_table.values()],
                 "Delta_Perf": [v["delta"] for v in summary_table.values()],
-                "Sensitivity": [v["sensitivity"] for v in summary_table.values()],
+                "Sens_Gaussian": [
+                    v["sensitivity_gaussian"] for v in summary_table.values()
+                ],
+                "Sens_Histogram": [
+                    v["sensitivity_histogram"] for v in summary_table.values()
+                ],
             }
             mlflow.log_table(
                 data=mlflow_table_format, artifact_file="perfs_summary.json"
