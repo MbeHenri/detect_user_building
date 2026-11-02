@@ -4,7 +4,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import mlflow
 import mlflow.sklearn
-from mlflow.tracking import MlflowClient
 from src.load import load_collected_user
 from src.plot import plot_position
 
@@ -16,6 +15,13 @@ parser.add_argument(
     type=str,
     default="building_config.json",
     help="Fichier de configuration de la carte (défaut: 'building_config.json')",
+)
+parser.add_argument(
+    "--alias",
+    "-a",
+    type=str,
+    default="production",
+    help="Alias du modèle dans MLflow Registry (défaut: 'production')",
 )
 parser.add_argument(
     "--tracking-uri",
@@ -40,27 +46,14 @@ if __name__ == "__main__":
 
     # Connexion au serveur MLflow
     mlflow.set_tracking_uri(args.tracking_uri)
-    client = MlflowClient()
 
     # Chargement des données brutes usager
     USER_DATA_PATH = "./datas/without_acces/BSSID_user.csv"
     usager = load_collected_user(USER_DATA_PATH)
 
-    # Récupération de la dernière version du modèle enregistré
-    model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
-    if not model_versions:
-        raise ValueError(f"Aucune version trouvée pour le modèle '{MODEL_NAME}'.")
-
-    latest_model_version = sorted(
-        model_versions, key=lambda v: int(v.version), reverse=True
-    )[0]
-    print(
-        f"[INFO] Modèle '{MODEL_NAME}' trouvé (Version: {latest_model_version.version}, Run ID: {latest_model_version.run_id})"
-    )
-
-    # Chargement du Pipeline complet unifié depuis MLflow Registry
-    model_uri = f"models:/{MODEL_NAME}/{latest_model_version.version}"
-    print(f"[INFO] Chargement du Pipeline complet depuis MLflow : {model_uri}")
+    # Chargement direct du Pipeline complet via l'alias MLflow (défaut: production)
+    model_uri = f"models:/{MODEL_NAME}@{args.alias}"
+    print(f"[INFO] Chargement du Pipeline depuis MLflow Registry : {model_uri}")
     full_pipeline = mlflow.sklearn.load_model(model_uri)
 
     # Extraction explicite des deux étapes (preModel puis regressor)
@@ -85,6 +78,7 @@ if __name__ == "__main__":
         image_curseur,
         echelle=echelle,
         path_computed="./position_compute.png",
+        showed=False,
     )
 
     plt.imshow(image)

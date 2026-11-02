@@ -24,18 +24,72 @@ Considérons qu'on a relevé leurs signaux à des positions données
 ![Test de la détection](images/test_ia.png "(IA)")
 ![Test de la détection](images/position_ia.png)
 
-## Ressources et Dépendances
+## Prérequis
 
-On a suivantes:
+- **Python** : 3.14+
+- **Git** : pour récupérer le projet
+- **Accès au stockage DVC** : le remote configuré (`.dvc/config`) pointe actuellement vers le repertoire local `/tmp/dvcstore`. Adaptez-le avec `dvc remote modify myremote url <votre_remote>` pour un acces distant
 
-- `requirements.txt`: fichier de librairies python à installer
-- `main.py`: code d'exemple d'utlisation
-- `main.ipynb`: notebook de test des algorithmes (sans le modèle d'IA) `(à lire)`
-- `detect_model.pkl`: fichier contenant le modèle entrainé (l'IA)
-- `ml.ipynb`: notebook d'entrainement et de test d'utilisation du modèle `(à lire)`
-- `datas`: dossier des fichiers contenant les signaux collectés (de type `csv`)
-- `src`: dossier contenant des fonctions utiles au calcul de la position
-- `images`: dossier contenant les images utiles
+## Structure du projet
+
+```text
+detect_user_building/
+├── requirements.txt           # dépendances Python
+├── building_config.json       # configuration du bâtiment (plan, curseur, échelle)
+├── main.py                    # script d'utilisation de la detection dans le dit batiement
+├── collect.py                 # collecte des signaux
+├── check_cpu.py               # informations sur le CPU
+│
+├── main.ipynb                 # notebook de test des algorithmes (sans IA) (à lire)
+├── ml.ipynb                   # notebook d'entrainement et de test du modèle (à lire)
+│
+├── legacy_train.py            # entrainement classique
+├── legacy_inference.py        # inférence classique
+├── mlflow_train.py            # entrainement avec suivi MLflow
+├── mlflow_inference.py        # inférence depuis un modèle MLflow
+├── mlflow_promote_alias.py    # promotion d'un modèle (production / staging)
+│
+├── src/                       # fonctions de calcul de la position
+│   ├── detect_access_points.py  # estimation des positions des points d'accès
+│   ├── detect_position.py       # recherche des zones les plus proches
+│   ├── detect_user.py           # détection de l'usager
+│   ├── distributions.py         # distributions et divergence KL
+│   ├── load.py / save.py        # chargement / sauvegarde des données
+│   ├── perfs.py                 # évaluation des performances
+│   ├── plot.py                  # visualisations
+│   └── optimisation/            # descente de gradient
+│
+├── datas/                     # signaux collectés (csv, json)
+│   ├── with_acces/            # données avec positions des points d'accès connues
+│   └── without_acces/         # données sans positions des points d'accès
+├── outputs.dvc                # empreinte DVC du dossier outputs
+├── images/                    # images (plan, captures)
+├── documentation/             # rapports du projet (PDF)
+└── .dvc/                      # configuration DVC
+```
+
+## Installation
+
+- Créer et activer l'environnement virtuel
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows (WSL) : idem
+```
+
+- Installer les dépendances
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install dvc
+```
+
+- Récupérer les modèles et sorties versionnés avec DVC
+
+```bash
+dvc pull
+```
 
 ## Machin Learning
 
@@ -51,8 +105,8 @@ source .venv/bin/activate
 
 ```bash
 # entrainement train - test
-python3 leagacy_train.py
-# python3 leagacy_train.py --help pour avoir de l'aide
+python3 legacy_train.py
+# python3 legacy_train.py --help pour avoir de l'aide
 
 # inference
 python3 legacy_inference.py
